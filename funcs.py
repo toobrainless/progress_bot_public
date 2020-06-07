@@ -1,12 +1,22 @@
 from telebot import types
 
 
-def createKeyboard(list_buttons=None):
-    markup = types.ReplyKeyboardMarkup(
-        resize_keyboard=True, row_width=3, one_time_keyboard=True)
-    if (list_buttons):
-        for item in list_buttons:
-            markup.add(types.KeyboardButton(item))
+def create_keyboard(list_buttons=None, row_width=2):
+    counter = 0
+    array = []
+    markup = types.ReplyKeyboardMarkup()
+    len_list_buttons = len(list_buttons)
+    for button in list_buttons[:]:
+        array.append(types.KeyboardButton(button))
+        counter += 1
+        list_buttons.remove(button)
+        if counter == row_width:
+            markup.row(*array)
+            array = []
+            counter = 0
+        if len(list_buttons) == len_list_buttons % row_width:
+            markup.row(*list_buttons)
+            break
     return markup
 
 
