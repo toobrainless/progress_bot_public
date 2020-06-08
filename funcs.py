@@ -32,3 +32,4 @@ def create_inline_keyboard(dict_buttons, row_width=1):
             cnt = 0
             v = []
     return markup
+
