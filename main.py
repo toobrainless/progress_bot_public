@@ -1,4 +1,5 @@
 import telebot
+import datetime as d
 # import peewee
 
 import config
@@ -26,6 +27,16 @@ def add_target(message):
 
 def add_task_name(message):
     db.Task.create(user_id=message.chat.id, task_text=message.text)
+    bot.send_message(message.chat.id, 'Вы успешно добавили задачу в список дел')
+
+
+@bot.message_handler(func=lambda m: m.text == 'Посмотреть список дел')
+def view_todo_list(message):
+    query = db.Task.select().where(db.Task.user_id == message.chat.id and
+                                   db.Task.task_date == d.datetime.date(d.datetime.today()))
+    tasks_selected = query.dicts().execute()
+    for task in tasks_selected:
+        print(task['task_text'])
 
 
 bot.polling()
