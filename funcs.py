@@ -4,7 +4,8 @@ from telebot import types
 def create_keyboard(list_buttons=None, row_width=2):
     counter = 0
     array = []
-    markup = types.ReplyKeyboardMarkup(one_time_keyboard=False)
+    markup = types.ReplyKeyboardMarkup(
+        one_time_keyboard=False, resize_keyboard=True)
     len_list_buttons = len(list_buttons)
     for button in list_buttons[:]:
         array.append(types.KeyboardButton(button))
@@ -32,4 +33,3 @@ def create_inline_keyboard(dict_buttons, row_width=1):
             cnt = 0
             v = []
     return markup
-
