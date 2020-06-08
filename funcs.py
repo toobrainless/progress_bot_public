@@ -1,11 +1,11 @@
 from telebot import types
 
 
-def create_keyboard(list_buttons=None, row_width=2):
+def create_keyboard(list_buttons=None, row_width=2, one_time_keyboard=False, resize_keyboard=True):
     counter = 0
     array = []
     markup = types.ReplyKeyboardMarkup(
-        one_time_keyboard=False, resize_keyboard=True)
+        one_time_keyboard=one_time_keyboard, resize_keyboard=resize_keyboard)
     len_list_buttons = len(list_buttons)
     for button in list_buttons[:]:
         array.append(types.KeyboardButton(button))
