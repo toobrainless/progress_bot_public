@@ -1,6 +1,5 @@
 import telebot
 import datetime as d
-# import peewee
 
 import config
 import funcs as f
@@ -9,8 +8,6 @@ import db
 
 
 bot = telebot.TeleBot(config.TG_TOKEN)
-# conn = peewee.SqliteDatabase('brainless.db')
-# cursor = conn.cursor()
 
 
 @bot.message_handler(commands=['start'])
@@ -21,22 +18,18 @@ def welcome(message):
 
 @bot.message_handler(func=lambda m: m.text == 'Новая задача')
 def add_target(message):
-    markup = f.create_keyboard(['Вернуться'], row_width=1, one_time_keyboard=True, resize_keyboard=False)
+    markup = f.create_keyboard(['Главное меню'], row_width=1, resize_keyboard=True)
     bot.send_message(message.chat.id, 'Введите вашу задачу:', reply_markup=markup)
-    bot.register_next_step_handler(message, check_todo_list_message)
-
-
-def check_todo_list_message(message):
-    if message.text == 'Вернуться':
-        pass
-    # здесь должна вылазить кнопка возврата
-    else:
-        add_task_name(message)
+    bot.register_next_step_handler(message, add_task_name)
 
 
 def add_task_name(message):
-    db.Task.create(user_id=message.chat.id, task_text=message.text)
-    bot.send_message(message.chat.id, 'Вы успешно добавили задачу в список дел')
+    markup1 = f.create_keyboard(static.start_markup, row_width=2)
+    if message.text == 'Главное меню':
+        bot.send_message(message.chat.id, 'Вы вернулись в главное меню', reply_markup=markup1)
+    else:
+        db.Task.create(user_id=message.chat.id, task_text=message.text)
+        bot.send_message(message.chat.id, 'Вы успешно добавили задачу в список дел', reply_markup=markup1)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Список дел')
