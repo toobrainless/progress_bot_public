@@ -8,13 +8,13 @@ import db
 
 
 bot = telebot.TeleBot(config.TG_TOKEN)
+main_menu = f.create_keyboard(static.start_markup, row_width=2)
 
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    markup = f.create_keyboard(static.start_markup, row_width=2)
     bot.send_message(
-        message.chat.id, 'Приветик. Я пока ничего не умею, но скоро научусь!!', reply_markup=markup)
+        message.chat.id, 'Приветик. Я пока ничего не умею, но скоро научусь!!', reply_markup=main_menu)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Новая задача')
@@ -27,43 +27,39 @@ def add_target(message):
 
 
 def add_task_name(message):
-    markup1 = f.create_keyboard(static.start_markup, row_width=2)
     if message.text == 'Главное меню':
         bot.send_message(
-            message.chat.id, 'Вы вернулись в главное меню', reply_markup=markup1)
+            message.chat.id, 'Вы вернулись в главное меню', reply_markup=main_menu)
     else:
         db.Task.create(user_id=message.chat.id, task_text=message.text)
         bot.send_message(
-            message.chat.id, 'Вы успешно добавили задачу в список дел', reply_markup=markup1)
+            message.chat.id, 'Вы успешно добавили задачу в список дел', reply_markup=main_menu)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Список дел')
 def view_todo_list(message):
     query = db.Task.select().where(db.Task.task_date == d.datetime.date(
         d.datetime.today())).where(db.Task.user_id == message.chat.id)
-    # print(query)
     tasks_selected = query.dicts().execute()
 
     task_dict = {}
     for task in tasks_selected:
-        key = 'task_' + str(task['task_id'])
+        key = str(int(task['done'])) + '_task_' + str(task['task_id'])
         if task['done']:
             task_dict[key] = '✅ ' + task['task_text']
         else:
             task_dict[key] = '❌ ' + task['task_text']
-    # print(task_dict)
+
     inline_markup = f.create_inline_keyboard(task_dict)
     bot.send_message(message.chat.id,
                      '<b>Ваш список дел на сегодня</b>\n<i>Если хотите отметить выполненную задачу, ткните в нее</i>',
                      reply_markup=inline_markup, parse_mode='html')
 
 
-@bot.callback_query_handler(func=lambda q: q.data[:4] == 'task')
+@bot.callback_query_handler(func=lambda q: q.data[2:6] == 'task')
 def change_progress_task(query):
-    sql_query = db.Task.select().where(db.Task.task_id == query.data[5:])
-    new_task = sql_query.dicts().execute()
-    sql_query = db.Task.update(done=not new_task[0]['done']).where(
-        db.Task.task_id == query.data[5:])
+    sql_query = db.Task.update(done=not bool(int(query.data[0]))).where(
+        db.Task.task_id == query.data[7:])
     sql_query.execute()
 
     query_1 = db.Task.select().where(db.Task.task_date == d.datetime.date(
@@ -72,7 +68,8 @@ def change_progress_task(query):
 
     task_dict = {}
     for task in tasks_selected:
-        key = 'task_' + str(task['task_id'])
+        not_done = str(int(not int(query.data[0])))
+        key = not_done + '_' + 'task_' + str(task['task_id'])
         if task['done']:
             task_dict[key] = '✅ ' + task['task_text']
         else:

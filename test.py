@@ -1,2 +1,2 @@
-print(not False)
-print(not True)
+print(bool(int(False)))
+print(int(True))
