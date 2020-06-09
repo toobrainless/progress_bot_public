@@ -59,27 +59,34 @@ def view_todo_list(message):
 @bot.callback_query_handler(func=lambda q: q.data[:4] == 'task')
 def change_progress_task(query):
     sql_query = db.Task.select().where(db.Task.task_id == query.data[5:])
-    new_task = sql_query.dicts().execute()
-
-    sql_query = db.Task.update(done=not new_task[0]['done']).where(db.Task.task_id == query.data[5:])
-    sql_query.execute()
-
-    query_1 = db.Task.select().where(db.Task.task_date == d.datetime.date(
-        d.datetime.today())).where(db.Task.user_id == query.message.chat.id)
-    tasks_selected = query_1.dicts().execute()
-
-    task_dict = {}
-    for task in tasks_selected:
-        key = 'task_' + str(task['task_id'])
-        if task['done']:
-            task_dict[key] = '✅ ' + task['task_text']
-        else:
-            task_dict[key] = '❌ ' + task['task_text']
-
-    inline_markup = f.create_inline_keyboard(task_dict)
-
-    bot.edit_message_reply_markup(message_id=query.message.message_id,
-                                  chat_id=query.message.chat.id, reply_markup=inline_markup)
+    new_task = sql_query.dicts().execute()[0]
+    if new_task['done']:
+        status = '✅✅✅✅✅'
+    else:
+        status = '❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌'
+    #
+    # sql_query = db.Task.update(done=not new_task[0]['done']).where(db.Task.task_id == query.data[5:])
+    # sql_query.execute()
+    #
+    # query_1 = db.Task.select().where(db.Task.task_date == d.datetime.date(
+    #     d.datetime.today())).where(db.Task.user_id == query.message.chat.id)
+    # tasks_selected = query_1.dicts().execute()
+    #
+    # task_dict = {}
+    # for task in tasks_selected:
+    #     key = 'task_' + str(task['task_id'])
+    #     if task['done']:
+    #         task_dict[key] = '✅ ' + task['task_text']
+    #     else:
+    #         task_dict[key] = '❌ ' + task['task_text']
+    #
+    # inline_markup = f.create_inline_keyboard(task_dict)
+    #
+    # bot.edit_message_reply_markup(message_id=query.message.message_id,
+    #                               chat_id=query.message.chat.id, reply_markup=inline_markup)
+    inline_keyboard = f.create_inline_keyboard(static.inline_dict, row_width=2)
+    bot.edit_message_text(status + '\n' + new_task['task_text'], query.message.chat.id,
+                          query.message.message_id, reply_markup=inline_keyboard)
 
 
 bot.polling()
