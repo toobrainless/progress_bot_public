@@ -90,9 +90,15 @@ def change_progress_task(query):
     #
     # bot.edit_message_reply_markup(message_id=query.message.message_id,
     #                               chat_id=query.message.chat.id, reply_markup=inline_markup)
-    inline_keyboard = f.create_inline_keyboard(static.inline_dict, row_width=2)
+
+    changed_dict = {}
+    for key in static.inline_dict.keys():
+        new_key = key + '_' + str(new_task['task_id'])
+        changed_dict[new_key] = static.inline_dict[key]
+
+    inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
     mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
-        '\n--------------------------------------------\n' + '<i>Запланировано на: </i>'
+        '\n---------------------------------\n' + '<i>Запланировано на: </i>'
     bot.edit_message_text(mess_text, query.message.chat.id,
                           query.message.message_id, parse_mode='html', reply_markup=inline_keyboard)
 
