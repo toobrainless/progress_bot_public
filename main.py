@@ -13,22 +13,27 @@ main_menu = f.create_keyboard(static.start_markup, row_width=2)
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    bot.send_message(message.chat.id, 'Приветик. Я пока ничего не умею, но скоро научусь!!', reply_markup=main_menu)
+    bot.send_message(
+        message.chat.id, 'Приветик. Я пока ничего не умею, но скоро научусь!!', reply_markup=main_menu)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Новая задача')
 def add_target(message):
-    markup = f.create_keyboard(['Главное меню'], row_width=1, resize_keyboard=True)
-    bot.send_message(message.chat.id, 'Введите вашу задачу:', reply_markup=markup)
+    markup = f.create_keyboard(
+        ['Главное меню'], row_width=1, resize_keyboard=True)
+    bot.send_message(message.chat.id, 'Введите вашу задачу:',
+                     reply_markup=markup)
     bot.register_next_step_handler(message, add_task_name)
 
 
 def add_task_name(message):
     if message.text == 'Главное меню':
-        bot.send_message(message.chat.id, 'Вы вернулись в главное меню', reply_markup=main_menu)
+        bot.send_message(
+            message.chat.id, 'Вы вернулись в главное меню', reply_markup=main_menu)
     else:
         db.Task.create(user_id=message.chat.id, task_text=message.text)
-        bot.send_message(message.chat.id, 'Вы успешно добавили задачу в список дел', reply_markup=main_menu)
+        bot.send_message(
+            message.chat.id, 'Вы успешно добавили задачу в список дел', reply_markup=main_menu)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Список дел')
@@ -38,7 +43,8 @@ def view_todo_list(message):
     tasks_selected = query.dicts().execute()
 
     if len(tasks_selected) == 0:
-        bot.send_message(message.chat.id, '<b>Тут не густо 🤦‍♂️</b>', parse_mode='html')
+        bot.send_message(
+            message.chat.id, '<b>Тут не густо 🤦‍♂️</b>', parse_mode='html')
 
     else:
         task_dict = {}
@@ -61,9 +67,9 @@ def change_progress_task(query):
     sql_query = db.Task.select().where(db.Task.task_id == query.data[5:])
     new_task = sql_query.dicts().execute()[0]
     if new_task['done']:
-        status = '✅✅✅✅✅'
+        status = '✅'
     else:
-        status = '❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌'
+        status = '❌'
     #
     # sql_query = db.Task.update(done=not new_task[0]['done']).where(db.Task.task_id == query.data[5:])
     # sql_query.execute()
@@ -85,8 +91,15 @@ def change_progress_task(query):
     # bot.edit_message_reply_markup(message_id=query.message.message_id,
     #                               chat_id=query.message.chat.id, reply_markup=inline_markup)
     inline_keyboard = f.create_inline_keyboard(static.inline_dict, row_width=2)
-    bot.edit_message_text(status + '\n' + new_task['task_text'], query.message.chat.id,
-                          query.message.message_id, reply_markup=inline_keyboard)
+    mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
+        '\n--------------------------------------------\n' + '<i>Запланировано на: </i>'
+    bot.edit_message_text(mess_text, query.message.chat.id,
+                          query.message.message_id, parse_mode='html', reply_markup=inline_keyboard)
+
+
+# @bot.callback_query_handler(func=lambda q: True)
+# def huynya(q):
+#     print(q.data)
 
 
 bot.polling()
