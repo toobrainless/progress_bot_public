@@ -67,22 +67,28 @@ def view_todo_list(message):
 @bot.callback_query_handler(func=lambda q: q.data[:4] == 'task')
 def open_task(query):
     sql_query = db.Task.select().where(db.Task.task_id == query.data[5:])
-    new_task = sql_query.dicts().execute()[0]
-    if new_task['done']:
-        status = '✅'
-    else:
-        status = '❌'
+    try:
+        new_task = sql_query.dicts().execute()[0]
+        if new_task['done']:
+            status = '✅'
+        else:
+            status = '❌'
 
-    changed_dict = {}
-    for key in static.inline_dict.keys():
-        new_key = key + '_' + str(new_task['task_id'])
-        changed_dict[new_key] = static.inline_dict[key]
+        changed_dict = {}
+        for key in static.inline_dict.keys():
+            new_key = key + '_' + str(new_task['task_id'])
+            changed_dict[new_key] = static.inline_dict[key]
 
-    inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
-    mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
-        '\n---------------------------------\n' + '<i>Запланировано на: </i>'
-    bot.edit_message_text(mess_text, query.message.chat.id,
-                          query.message.message_id, parse_mode='html', reply_markup=inline_keyboard)
+        inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
+        mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
+            '\n---------------------------------\n' + '<i>Запланировано на: </i>'
+        bot.edit_message_text(mess_text, query.message.chat.id,
+                              query.message.message_id, parse_mode='html', reply_markup=inline_keyboard)
+
+    except IndexError:
+        bot.send_message(query.message.chat.id, 'Похоже вы уже удалили эту задачу')
+        view_todo_list(query.message)
+        bot.delete_message(query.message.chat.id, query.message.message_id)
 
 
 @bot.callback_query_handler(func=lambda q: q.data[:4] == 'done')
