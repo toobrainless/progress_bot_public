@@ -43,8 +43,10 @@ def view_todo_list(message):
     tasks_selected = query.dicts().execute()
 
     if len(tasks_selected) == 0:
+        inline_keyboard_new_task = f.create_inline_keyboard({'new_task': 'Добавить задачу'})
         bot.send_message(
-            message.chat.id, '<b>Тут не густо 🤦‍♂️</b>', parse_mode='html')
+            message.chat.id, '<b>Ваш список дел пуст 🤦‍♂️</b>',
+            parse_mode='html', reply_markup=inline_keyboard_new_task)
 
     else:
         task_dict = {}
@@ -63,7 +65,7 @@ def view_todo_list(message):
 
 
 @bot.callback_query_handler(func=lambda q: q.data[:4] == 'task')
-def change_progress_task(query):
+def open_task(query):
     sql_query = db.Task.select().where(db.Task.task_id == query.data[5:])
     new_task = sql_query.dicts().execute()[0]
     if new_task['done']:
@@ -106,6 +108,20 @@ def change_progress_task(query):
                 '\n---------------------------------\n' + '<i>Запланировано на: </i>'
     bot.edit_message_text(mess_text, query.message.chat.id, reply_markup=inline_keyboard,
                           message_id=query.message.message_id, parse_mode='html')
+
+
+@bot.callback_query_handler(func=lambda q: q.data[:6] == 'delete')
+def delete_task(query):
+    task = db.Task.get(db.Task.task_id == query.data[7:])
+    task.delete_instance()
+    bot.edit_message_text('Вы удалили задачу', message_id=query.message.message_id, chat_id=query.message.chat.id)
+    view_todo_list(query.message)
+
+
+@bot.callback_query_handler(func=lambda q: q.data == 'new_task')
+def new_task_callback(query):
+    bot.delete_message(query.message.chat.id, query.message.message_id)
+    add_target(query.message)
 
 
 # @bot.callback_query_handler(func=lambda q: True)
