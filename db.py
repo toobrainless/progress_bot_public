@@ -15,6 +15,7 @@ class Task(BaseModel):
     task_text = peewee.TextField(column_name='TaskText')
     done = peewee.BooleanField(column_name='Done', default=False)
     task_date = peewee.DateField(column_name='Date', default=d.datetime.date(d.datetime.today()))
+    task_desc = peewee.TextField(column_name='TaskDesc', default=None)
 
     class Meta:
         table_name = 'Tasks'

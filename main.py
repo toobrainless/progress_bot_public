@@ -14,7 +14,8 @@ main_menu = f.create_keyboard(static.start_markup, row_width=2)
 @bot.message_handler(commands=['start'])
 def welcome(message):
     bot.send_message(
-        message.chat.id, 'Приветик. Я пока ничего не умею, но скоро научусь!!', reply_markup=main_menu)
+        message.chat.id, f"Привет, {message.from_user.first_name}. Я пока ничего не умею, но скоро научусь!!",
+        reply_markup=main_menu)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Новая задача')
@@ -60,7 +61,7 @@ def view_todo_list(message):
         inline_markup = f.create_inline_keyboard(task_dict)
         bot.send_message(message.chat.id,
                          '<strong>Ваш список дел на сегодня</strong>\n'
-                         '<i>Если хотите отметить выполненную задачу, ткните в нее</i>',
+                         '<i>Если хотите отметить развернуть задачу, ткните в нее</i>',
                          reply_markup=inline_markup, parse_mode='html')
 
 
@@ -81,7 +82,8 @@ def open_task(query):
 
         inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
         mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
-            '\n---------------------------------\n' + '<i>Запланировано на: </i>'
+            '\n---------------------------------\n' + f"<i>Запланировано на: {new_task['task_date']}</i>" \
+                    + '\n---------------------------------\n' + str(new_task['task_desc'])
         bot.edit_message_text(mess_text, query.message.chat.id,
                               query.message.message_id, parse_mode='html', reply_markup=inline_keyboard)
 
@@ -111,7 +113,8 @@ def change_progress_task(query):
 
     inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
     mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
-                '\n---------------------------------\n' + '<i>Запланировано на: </i>'
+                '\n---------------------------------\n' + f"<i>Запланировано на: {new_task['task_date']}</i>" \
+                + '\n---------------------------------\n' + str(new_task['task_desc'])
     bot.edit_message_text(mess_text, query.message.chat.id, reply_markup=inline_keyboard,
                           message_id=query.message.message_id, parse_mode='html')
 
@@ -128,6 +131,19 @@ def delete_task(query):
 def new_task_callback(query):
     bot.delete_message(query.message.chat.id, query.message.message_id)
     add_target(query.message)
+
+
+@bot.callback_query_handler(func=lambda q: q.data[:4] == 'desc')
+def change_desc(query):
+    bot.send_message(query.message.chat.id, 'Введите новое описание')
+    bot.register_next_step_handler(query.message, edit_task_desc, query)
+
+
+def edit_task_desc(message, query):
+    task = db.Task.update(task_desc=message.text).where(db.Task.task_id == query.data[5:])
+    task.execute()
+    bot.delete_message(query.message.chat.id, query.message.message_id)
+    bot.send_message(message.chat.id, 'Вы изменили описание')
 
 
 # @bot.callback_query_handler(func=lambda q: True)
