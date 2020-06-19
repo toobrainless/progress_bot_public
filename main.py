@@ -1,5 +1,6 @@
 import telebot
 import datetime as d
+import sqlite3
 
 import config
 import funcs as f
@@ -16,6 +17,21 @@ def welcome(message):
     bot.send_message(
         message.chat.id, f"Привет, {message.from_user.first_name}. Я пока ничего не умею, но скоро научусь!!",
         reply_markup=main_menu)
+    have_user = False
+    users = db.User.select().dicts().execute()
+    for user in users:
+        if user['user_id'] == message.chat.id:
+            have_user = True
+
+    if not have_user:
+        db.User.create(user_id=message.chat.id)
+
+
+@bot.message_handler(func=lambda m: m.text == 'q')
+def q(message):
+    users = db.User.select()
+    users_selected = users.dicts().execute()[0]
+    print(users_selected)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Новая задача')
@@ -39,10 +55,18 @@ def add_task_name(message):
 
 @bot.message_handler(func=lambda m: m.text == 'Список дел')
 def view_todo_list(message):
+    user = db.User.get(user_id=message.chat.id)
+    print(user.last_target_list)
+    if user.last_target_list:
+        bot.edit_message_text('Вы открыли новый список дел', message.chat.id, user.last_target_list + 1)
+        # bot.delete_message(message.chat.id, user.last_target_list + 1)
+
+    user.last_target_list = message.message_id
+    user.save()
+
     query = db.Task.select().where(db.Task.task_date == d.datetime.date(
         d.datetime.today())).where(db.Task.user_id == message.chat.id)
     tasks_selected = query.dicts().execute()
-
     if len(tasks_selected) == 0:
         inline_keyboard_new_task = f.create_inline_keyboard({'new_task': 'Добавить задачу'})
         bot.send_message(
@@ -81,8 +105,10 @@ def open_task(query):
             changed_dict[new_key] = static.inline_dict[key]
 
         inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
+        date_format = str(new_task['task_date'])[-2:] + '.' + str(new_task['task_date'])[5:7] + '.'\
+                     + str(new_task['task_date'])[:4]
         mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
-            '\n---------------------------------\n' + f"<i>Запланировано на: {new_task['task_date']}</i>" \
+            '\n---------------------------------\n' + f"<i>Запланировано на: {date_format}</i>" \
                     + '\n---------------------------------\n' + str(new_task['task_desc'])
         bot.edit_message_text(mess_text, query.message.chat.id,
                               query.message.message_id, parse_mode='html', reply_markup=inline_keyboard)
@@ -110,10 +136,11 @@ def change_progress_task(query):
     for key in static.inline_dict.keys():
         new_key = key + '_' + str(new_task['task_id'])
         changed_dict[new_key] = static.inline_dict[key]
-
+    date_format = str(new_task['task_date'])[-2:] + '.' + str(new_task['task_date'])[5:7] + '.' \
+                  + str(new_task['task_date'])[:4]
     inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
     mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
-                '\n---------------------------------\n' + f"<i>Запланировано на: {new_task['task_date']}</i>" \
+                '\n---------------------------------\n' + f"<i>Запланировано на: {date_format}</i>" \
                 + '\n---------------------------------\n' + str(new_task['task_desc'])
     bot.edit_message_text(mess_text, query.message.chat.id, reply_markup=inline_keyboard,
                           message_id=query.message.message_id, parse_mode='html')
