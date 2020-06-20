@@ -1,6 +1,5 @@
 import telebot
 import datetime as d
-import sqlite3
 
 import config
 import funcs as f
@@ -55,14 +54,15 @@ def add_task_name(message):
 
 @bot.message_handler(func=lambda m: m.text == 'Список дел')
 def view_todo_list(message):
-    user = db.User.get(user_id=message.chat.id)
-    print(user.last_target_list)
-    if user.last_target_list:
-        bot.edit_message_text('Вы открыли новый список дел', message.chat.id, user.last_target_list + 1)
-        # bot.delete_message(message.chat.id, user.last_target_list + 1)
-
-    user.last_target_list = message.message_id
-    user.save()
+    # try:
+    #     user = db.User.get(user_id=message.chat.id)
+    #     if user.last_target_list:
+    #         bot.edit_message_text('Вы открыли новый список дел', message.chat.id, user.last_target_list + 1)
+    #         # bot.delete_message(message.chat.id, user.last_target_list + 1)
+    # except telebot.apihelper.ApiException:
+    #     pass
+    # user.last_target_list = message.message_id
+    # user.save()
 
     query = db.Task.select().where(db.Task.task_date == d.datetime.date(
         d.datetime.today())).where(db.Task.user_id == message.chat.id)
@@ -121,29 +121,35 @@ def open_task(query):
 
 @bot.callback_query_handler(func=lambda q: q.data[:4] == 'done')
 def change_progress_task(query):
-    sql_query = db.Task.select().where(db.Task.task_id == query.data[5:])
-    new_task = sql_query.dicts().execute()[0]
+    try:
+        sql_query = db.Task.select().where(db.Task.task_id == query.data[5:])
+        new_task = sql_query.dicts().execute()[0]
 
-    sql_query = db.Task.update(done=not new_task['done']).where(db.Task.task_id == query.data[5:])
-    sql_query.execute()
+        sql_query = db.Task.update(done=not new_task['done']).where(db.Task.task_id == query.data[5:])
+        sql_query.execute()
 
-    if not new_task['done']:
-        status = '✅'
-    else:
-        status = '❌'
+        if not new_task['done']:
+            status = '✅'
+        else:
+            status = '❌'
 
-    changed_dict = {}
-    for key in static.inline_dict.keys():
-        new_key = key + '_' + str(new_task['task_id'])
-        changed_dict[new_key] = static.inline_dict[key]
-    date_format = str(new_task['task_date'])[-2:] + '.' + str(new_task['task_date'])[5:7] + '.' \
-                  + str(new_task['task_date'])[:4]
-    inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
-    mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
-                '\n---------------------------------\n' + f"<i>Запланировано на: {date_format}</i>" \
-                + '\n---------------------------------\n' + str(new_task['task_desc'])
-    bot.edit_message_text(mess_text, query.message.chat.id, reply_markup=inline_keyboard,
-                          message_id=query.message.message_id, parse_mode='html')
+        changed_dict = {}
+        for key in static.inline_dict.keys():
+            new_key = key + '_' + str(new_task['task_id'])
+            changed_dict[new_key] = static.inline_dict[key]
+        date_format = str(new_task['task_date'])[-2:] + '.' + str(new_task['task_date'])[5:7] + '.' \
+                      + str(new_task['task_date'])[:4]
+        inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
+        mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
+                    '\n---------------------------------\n' + f"<i>Запланировано на: {date_format}</i>" \
+                    + '\n---------------------------------\n' + str(new_task['task_desc'])
+        bot.edit_message_text(mess_text, query.message.chat.id, reply_markup=inline_keyboard,
+                              message_id=query.message.message_id, parse_mode='html')
+
+    except IndexError:
+        bot.send_message(query.message.chat.id, 'Похоже вы уже удалили эту задачу')
+        view_todo_list(query.message)
+        bot.delete_message(query.message.chat.id, query.message.message_id)
 
 
 @bot.callback_query_handler(func=lambda q: q.data[:6] == 'delete')
