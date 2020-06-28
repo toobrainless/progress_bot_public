@@ -8,7 +8,7 @@ import db
 
 
 bot = telebot.TeleBot(config.TG_TOKEN)
-main_menu = f.create_keyboard(static.start_markup, row_width=2)
+main_menu = f.create_keyboard(static.start_markup, row_width=2, one_time_keyboard=True)
 
 
 @bot.message_handler(commands=['start'])
@@ -23,14 +23,16 @@ def welcome(message):
             have_user = True
 
     if not have_user:
-        db.User.create(user_id=message.chat.id)
+        db.User.create(user_id=message.chat.id, user_name=message.from_user.username)
 
 
 @bot.message_handler(func=lambda m: m.text == 'q')
 def q(message):
-    users = db.User.select()
-    users_selected = users.dicts().execute()[0]
-    print(users_selected)
+    pass
+    # users = db.User.select()
+    # users_selected = users.dicts().execute()[0]
+    # print(users_selected)
+    # print(message.from_user)
 
 
 @bot.message_handler(func=lambda m: m.text == 'Новая задача')
@@ -54,15 +56,15 @@ def add_task_name(message):
 
 @bot.message_handler(func=lambda m: m.text == 'Список дел')
 def view_todo_list(message):
-    # try:
-    #     user = db.User.get(user_id=message.chat.id)
-    #     if user.last_target_list:
-    #         bot.edit_message_text('Вы открыли новый список дел', message.chat.id, user.last_target_list + 1)
-    #         # bot.delete_message(message.chat.id, user.last_target_list + 1)
-    # except telebot.apihelper.ApiException:
-    #     pass
-    # user.last_target_list = message.message_id
-    # user.save()
+    try:
+        user = db.User.get(user_id=message.chat.id)
+        if user.last_target_list:
+            bot.edit_message_text('Вы открыли новый список дел', message.chat.id, user.last_target_list + 1)
+            # bot.delete_message(message.chat.id, user.last_target_list + 1)
+    except telebot.apihelper.ApiException:
+        pass
+    user.last_target_list = message.message_id
+    user.save()
 
     query = db.Task.select().where(db.Task.task_date == d.datetime.date(
         d.datetime.today())).where(db.Task.user_id == message.chat.id)
@@ -137,8 +139,9 @@ def change_progress_task(query):
         for key in static.inline_dict.keys():
             new_key = key + '_' + str(new_task['task_id'])
             changed_dict[new_key] = static.inline_dict[key]
-        date_format = str(new_task['task_date'])[-2:] + '.' + str(new_task['task_date'])[5:7] + '.' \
-                      + str(new_task['task_date'])[:4]
+        # date_format = str(new_task['task_date'])[-2:] + '.' + str(new_task['task_date'])[5:7] + '.' \
+        #               + str(new_task['task_date'])[:4]
+        date_format = f"{new_task['task_date'].day}.{new_task['task_date'].month}.{new_task['task_date'].year}"
         inline_keyboard = f.create_inline_keyboard(changed_dict, row_width=2)
         mess_text = status + ' <b>' + new_task['task_text'] + '</b> ' + status + \
                     '\n---------------------------------\n' + f"<i>Запланировано на: {date_format}</i>" \
@@ -177,6 +180,51 @@ def edit_task_desc(message, query):
     task.execute()
     bot.delete_message(query.message.chat.id, query.message.message_id)
     bot.send_message(message.chat.id, 'Вы изменили описание')
+
+
+@bot.message_handler(func=lambda m: m.text == 'Команды')
+def team(message):
+    # Открыть базу данных, посмотреть юзеров в команде и вывести их списком
+    query = db.GroupMember.select().where(db.GroupMember.UserID == message.chat.id)
+    list_of_groups = list(query.execute())
+    print(list_of_groups)
+    markup = f.create_inline_keyboard({'join': 'Добавить команду'})
+    bot.send_message(message.chat.id, 'Вот ваши команды', reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda q: q.data == 'join')
+def join(query):
+    bot.send_message(query.message.chat.id, 'Пришлите индефикатор группы')
+    bot.register_next_step_handler(query.message, scan_unique_id)
+
+
+def scan_unique_id(message):
+    query = db.Group.select().where(db.Group.unique_id == message.text)
+    group = query.execute()
+    if len(list(group)):
+        group = group[0]
+        try:
+            group_member = db.GroupMember.create(UserID=message.chat.id, group_id=group.group_id)
+        except Exception as Error:
+            bot.send_message(message.chat.id, 'Вы уже есть в этой группе')
+
+    else:
+        bot.send_message(message.chat.id, 'Группы с таким индентификатором не существует')
+
+
+@bot.message_handler(func=lambda m: m.text == 'Создать команду')
+def write_team_name(message):
+    bot.send_message(message.chat.id, 'Введите название команды')
+    bot.register_next_step_handler(message, create_team)
+
+
+def create_team(message):
+    created_group_id = db.Group.create(name=message.text, unique_id='Еще не готово')
+    db.GroupMember.create(UserID=message.chat.id, group_id=created_group_id.group_id)
+    unique_id = f.generator_id(created_group_id, 10)
+    updated_unique_id = db.Group.update(unique_id=unique_id).where(db.Group.group_id == created_group_id)
+    updated_unique_id.execute()
+    bot.send_message(message.chat.id, f'Вот ваш уникальный идентификатор: {created_group_id.unique_id}')
 
 
 # @bot.callback_query_handler(func=lambda q: True)

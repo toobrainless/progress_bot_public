@@ -1,4 +1,5 @@
 from telebot import types
+import random
 
 
 def create_keyboard(list_buttons=None, row_width=2, one_time_keyboard=False, resize_keyboard=True):
@@ -34,3 +35,12 @@ def create_inline_keyboard(dict_buttons, row_width=1):
             cnt = 0
             v = []
     return markup
+
+
+def generator_id(GroupID, len_id):
+    unique_id = str(GroupID)
+    while len(unique_id) != len_id + len(str(GroupID)):
+        unique_id += str(random.randint(0, 10))
+
+    return unique_id
+
