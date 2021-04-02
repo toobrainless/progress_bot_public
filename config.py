@@ -1,1 +1,1 @@
-TG_TOKEN = '1184085899:AAHomvSV5yk1Ns7JpWiXsMHlwhKQJTuyNUA'
+TG_TOKEN = 'some_token'
