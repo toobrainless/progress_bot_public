@@ -2,8 +2,8 @@ import requests
 import json
 import pprint
 
-QIWI_TOKEN = 'b54133f0bb4500328dae755a7bb55556'
-QIWI_ACCOUNT = '+79173922879'
+QIWI_TOKEN = 'some_token'
+QIWI_ACCOUNT = 'some_number'
 
 s = requests.Session()
 s.headers['authorization'] = 'Bearer ' + QIWI_TOKEN
